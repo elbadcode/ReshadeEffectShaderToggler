@@ -4,7 +4,7 @@ ReShade Effect Shader Toggler (REST) offers several features for analyzing and r
 
 REST reads game shaders and lists them in descending order as they occurred over the sample duration, measured in frames that can be specified in the addon options. The initial value will likely be sufficient for things like UI but consider using a longer duration if searching deeper for game information. The primary use case is to control when and where to apply ReShade effects but it can also copy render targets from the game to textures and extract constant buffer. In fact you can do all 3 in a single group though this is probably not wise due to performance concerns. 
 
-![Screenshot 2024-06-29 183216](https://github.com/elbadcode/ReshadeEffectShaderToggler/assets/10409982/15378cb2-a3d9-4521-91a6-f45298f83bb7)
+![REST](Images/REST)
 
 
 Continuing with the options, Resource Shim allows for filtering only srgb resources which maybe necessary in some games. If you know you need srgb only perhaps this might serve as an optimization but the safer option is to leave it at none. There is also an option for FF14 that seems to rely on datamined game information to enable and perhaps hasten resource collection. If you have similar info consider forking and rebuilding the addon to utilize it. For the rest of us just leave it at none and move on.    
@@ -25,13 +25,15 @@ We don't actually necessarily need to use any of these matrices or variables in 
 
 Before proceeding with my example the last feature to mention is the option to push to the CB rather than reading from the buffer. This may need to be used with memcpy since we would be uploading from cpu to gpu. I don't have a use case for it so I couldn't test it. Presumably you could do things like make your own timer but I don't see any reason why I would want to write to the CB when ReShade has other options for storing and accessing data 
  
-I will be looking at constant buffer readings in a certain anime game running on D3D11. This game happens to store the computed value of the healthbar as a float in a constant buffer. Knowing this ahead of time (accessed in 3dmigoto mods with the line `store = $health, ps-cb0, 33`) I quickly found the appropriate shaders at offset 132 or 0x084
+I will be looking at constant buffer readings in a certain anime game running on D3D11. This game happens to store the computed value of the healthbar as a float in a constant buffer. Knowing this ahead of time (accessed in 3dmigoto mods with the line `store = $health, ps-cb0, 33`) I quickly found the appropriate shaders at offset 0x080 by 0x04 which comes out to 0x084 or 132. Note that while I have highlighted the cells for easy viewing purpose there is no feature to do this in REST.
 
-![Screenshot 2024-06-29 183216](https://github.com/elbadcode/ReshadeEffectShaderToggler/assets/10409982/5dc2229f-e62c-4252-8e92-63e317f9b69a)
+![High HP](Images/hihp)
 
+For those not keen on quick maths I can confirm for you that 18657 / 23111 does indeed equal 0.80730391 and 550/20626 does equal 0.02666509
 
+![Low HP](Images/lowhp)
 
-You will likely not find it as easy to get useful data unless you know what you're looking for ahead of time. An addon that should be helpful is renodx. I am still exploring its usage myself but it allows for live disassembly of shaders using the 3dmigoto HLSL decompiler, while outputting shader names in the same format as ReShade. Note that if using renodx with certain games including the one in this example you should remove any dumped shaders from the game folder on startup as it can cause the game to fail to verify some data.
+You will likely not find it as easy to get useful data unless you know what you're looking for ahead of time. An addon that should be helpful is [renodx](https://github.com/clshortfuse/renodx). I am still exploring its usage myself but it allows for live disassembly of shaders using the [3dmigoto HLSL decompiler](https://github.com/bo3b/3Dmigoto), while outputting shader names in the same format as ReShade. Note that if using renodx with certain games including the one in this example you should remove any dumped shaders from the game folder on startup as it can cause the game to fail to verify some data.
 
 Back to our example, the health storage can be found in the first vertex shader and on occasion in multiple early pixel shaders, though I settled on binding one from each stage and setting the CB stage to pixel. It appears that even if you select a vertex shader from the list, setting the CB stage to pixel will find the corresponding pixel shaders and vice versa but I don't have full clarity on this yet. 
 
@@ -41,7 +43,7 @@ I found the health value stored early in the pipeline in slot 2 binding 0 at 0x0
 
 To use this reading in a shader we need to add variable bindings. I decided to use the Near value to store my health reading and used a prevviewmatrix to get the old values, thus allowing me to calculate damage or account for sudden large cases when switching character or opening menus that unset the value (setting to 0). To actually get these values I added a variable binding at 0x084 for near and chose to retain previous value. I'm not sure exactly what this option does as both my damage calc and straight health readings seem to work no matter if I select it or not. Possibly only comes into play when using push mode or another feature of REST not covered here. Lastly I set a timer binding in another shader group as mentioned and we're ready to write our shader.
 
-![Screenshot 2024-07-01 043840](https://github.com/elbadcode/ReshadeEffectShaderToggler/assets/10409982/acd6b354-884d-4d37-978a-fabdbad2cf0f)
+![varbinding](Images/varbinding)
 
 These bindings can be accessed by assigning them to uniforms with the "source" annotation provided in ReShade's fx language. For example here is a "ViewMatrix" variable which produces a 4x4 array: 
 ```
@@ -90,18 +92,25 @@ Here you can see it in action
 
 
 
-https://github.com/elbadcode/ReshadeEffectShaderToggler/assets/10409982/d37d0500-4bc9-4f02-8894-fc310a1ff898
+
+https://github.com/elbadcode/ReshadeEffectShaderToggler/assets/10409982/85e91b04-028d-4672-ae60-02811392d001
+
+
 
 
 And see that it does appropriately cease the effect in menus whereas previous attempt were often laggy or failed to clear the value. You will likely need to add similar logical steps to handle whatever CB data you decide to use.
 
 
-https://github.com/elbadcode/ReshadeEffectShaderToggler/assets/10409982/578054a7-d402-4646-a1a3-d1c20fa294fb
+
+
+https://github.com/elbadcode/ReshadeEffectShaderToggler/assets/10409982/2a58b06e-9e48-44c8-b524-3a01eccd3fcb
+
+
 
 
 And that's about all I have for now. Hopefully you learned something useful. I've been doing graphics programming for less than a year (directx for only a few months) so I'm no expert and likely won't be able to answer any questions. Most challenges here will be game specific anyway, but I think this should be helpful for providing a concrete and intuitively visualized example of how to use the feature. 
 
 
-\- Written by lobotomyx (github.com/elbadcode) 
-\- ReShade by Crosire, ReShade Effect Shader Toggler by 4lex4nder, ReShade Shader Toggler by FransBouma
+\- Written by [lobotomyx](https://github.com/elbadcode) 
+\- [https://github.com/crosire/reshade](ReShade) by Crosire, [ReShade Effect Shader Toggler](https://github.com/4lex4nder/ReshadeEffectShaderToggler) by 4lex4nder, [ReShade Shader Toggler](https://github.com/FransBouma/ShaderToggler) by FransBouma
 
