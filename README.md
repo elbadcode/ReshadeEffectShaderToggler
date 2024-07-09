@@ -1,4 +1,4 @@
-# New Constant Buffer Extraction Guide on the [Wiki](https://github.com/elbadcode/ReshadeEffectShaderToggler/wiki/Constant-Buffer-Extraction-in-Action)
+# New Constant Buffer Extraction Guide on the [Wiki](https://github.com/elbadcode/ReshadeEffectShaderToggler/wiki/Constant-Buffer-Extraction-in-Action) 
 
 # ReshadeEffectShaderToggler [![MSBuild](https://github.com/4lex4nder/ReshadeEffectShaderToggler/actions/workflows/msbuild.yml/badge.svg)](https://github.com/4lex4nder/ReshadeEffectShaderToggler/actions/workflows/msbuild.yml) [![Release](https://github.com/4lex4nder/ReshadeEffectShaderToggler/actions/workflows/release.yml/badge.svg)](https://github.com/4lex4nder/ReshadeEffectShaderToggler/actions/workflows/release.yml)
 Reshade 5.8+ addon to apply Reshade effects to render targets bound before specific, user-configurable, groups of shaders are 
